@@ -261,4 +261,19 @@ public:
     virtual std::string subtitle() const override;
 };
 
+class TestIsFileExistPerformance : public FileUtilsDemo
+{
+private:
+    static const int MAX_FILES = 2000;
+    std::string _filePaths[MAX_FILES];
+
+public:
+    CREATE_FUNC(TestIsFileExistPerformance);
+
+    virtual void onEnter() override;
+    virtual void onExit() override;
+    virtual std::string title() const override;
+    virtual std::string subtitle() const override;
+};
+
 #endif /* __FILEUTILSTEST_H__ */

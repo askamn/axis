@@ -24,6 +24,8 @@
 
 #include "FileUtilsTest.h"
 
+#include <chrono>
+
 USING_NS_AX;
 
 FileUtilsTests::FileUtilsTests()
@@ -31,6 +33,7 @@ FileUtilsTests::FileUtilsTests()
     ADD_TEST_CASE(TestResolutionDirectories);
     ADD_TEST_CASE(TestSearchPath);
     ADD_TEST_CASE(TestIsFileExist);
+    ADD_TEST_CASE(TestIsFileExistPerformance);
     ADD_TEST_CASE(TestIsDirectoryExist);
     ADD_TEST_CASE(TestFileFuncs);
     ADD_TEST_CASE(TestDirectoryFuncs);
@@ -246,6 +249,81 @@ std::string TestIsFileExist::title() const
 }
 
 std::string TestIsFileExist::subtitle() const
+{
+    return "";
+}
+
+// TestIsFileExistPerformance
+
+void TestIsFileExistPerformance::onEnter()
+{
+    FileUtilsDemo::onEnter();
+    auto fs = FileUtils::getInstance();
+
+    int subDirectories;
+    for (int i = 0; i < MAX_FILES; i++)
+    {
+        _filePaths[i] = fs->getWritablePath();
+        subDirectories = rand() % 5;
+        for (int j = 0; j < subDirectories; j++)
+            _filePaths[i] += std::to_string(j) + "/";
+
+        if (subDirectories > 0)
+            fs->createDirectory(_filePaths[i]);
+        _filePaths[i] += "_" + std::to_string(i);
+        AXLOG("Creating %s", _filePaths[i].c_str());
+    }
+
+    // The data that we will write to test files
+    std::string data(2048, '0');
+    for (int i = 0; i < MAX_FILES; i+=2)
+    {
+        fs->writeStringToFile(data, _filePaths[i]);
+    }
+
+    int existsCount = 0;
+    int notExists = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < MAX_FILES; ++i)
+    {
+        if (fs->isFileExist(_filePaths[i]))
+        {
+            existsCount++;
+        }
+        else
+        {
+            notExists++;
+        }
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    AXLOG("[TestIsFileExistPerformance]: Took %d ms", ms);
+
+    AXASSERT(existsCount == MAX_FILES / 2, "existsCount invalid!");
+    AXASSERT(notExists == MAX_FILES / 2, "notExists invalid!");
+}
+
+void TestIsFileExistPerformance::onExit()
+{
+    FileUtils* fs = FileUtils::getInstance();
+    for (int i = 0; i < MAX_FILES; ++i)
+    {
+        if (fs->isFileExist(_filePaths[i]))
+        {
+             fs->removeFile(_filePaths[i]);
+        }
+    }
+
+    FileUtilsDemo::onExit();
+}
+
+std::string TestIsFileExistPerformance::title() const
+{
+    return "FileUtils: check performance of isFileExistInternal";
+}
+
+std::string TestIsFileExistPerformance::subtitle() const
 {
     return "";
 }
